@@ -144,7 +144,8 @@ fetch("posts/index.json").then(r => r.json()).then(list => {
   dates = list.sort();
   $("#pick").min = dates[0];
   $("#pick").max = dates[dates.length - 1];
-  const today = kstToday();
+  // ?d=2026-11-02 처럼 날짜를 붙이면 그 게시물로 바로 연다
+  const today = new URLSearchParams(location.search).get("d") || kstToday();
   const i = dates.indexOf(today);
   const upcoming = dates.findIndex(d => d > today);
   idx = i >= 0 ? i : upcoming >= 0 ? upcoming : dates.length - 1;
