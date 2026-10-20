@@ -82,17 +82,26 @@ async function show() {
   if (!d) { c.innerHTML = `<p class="empty">아직 준비된 게시물이 없어요.</p>`; return; }
 
   const base = `posts/${d}/`;
-  const [caption, threads] = await Promise.all([
+  const [caption, threads, hasVideo] = await Promise.all([
     fetch(base + "caption.txt").then(r => r.text()),
     fetch(base + "threads.json").then(r => r.json()),
+    fetch(base + "video.mp4", { method: "HEAD" }).then(r => r.ok).catch(() => false),
   ]);
+  // 영상이 있는 날은 릴스로 올린다: 영상 공유, 표지 그림은 보조로
+  const media = hasVideo
+    ? { file: "video.mp4", type: "video/mp4", name: `daily_test_${d}.mp4`, what: "영상" }
+    : { file: "image.jpg", type: "image/jpeg", name: `daily_test_${d}.jpg`, what: "그림" };
   c.innerHTML = `
-    <img src="${base}image.jpg" alt="${d} 심리테스트 그림">
+    ${hasVideo
+      ? `<video src="${base}video.mp4" poster="${base}image.jpg" controls playsinline preload="metadata" style="width:100%;border-radius:14px;display:block"></video>`
+      : `<img src="${base}image.jpg" alt="${d} 심리테스트 그림">`}
     <div class="row">
-      <button class="btn" id="share">그림 공유 · 저장</button>
-      <a class="btn alt" href="${base}image.jpg" download="daily_test_${d}.jpg">다운로드</a>
+      <button class="btn" id="share">${media.what} 공유 · 저장</button>
+      <a class="btn alt" href="${base}${media.file}" download="${media.name}">다운로드</a>
     </div>
-    <p class="tip">폰에서는 "그림 공유 · 저장"으로 인스타에 바로 보내거나 사진첩에 저장할 수 있어요. 안 되면 그림을 길게 눌러 저장하세요.</p>
+    ${hasVideo
+      ? `<p class="tip">오늘은 릴스예요. "영상 공유 · 저장"으로 인스타 릴스에 바로 보내거나 저장하세요. 표지 그림은 <a href="${base}image.jpg" download="daily_test_${d}_표지.jpg">여기</a>에서 받을 수 있어요.</p>`
+      : `<p class="tip">폰에서는 "그림 공유 · 저장"으로 인스타에 바로 보내거나 사진첩에 저장할 수 있어요. 안 되면 그림을 길게 눌러 저장하세요.</p>`}
     <section id="ig"><h2>인스타그램 캡션</h2></section>
     <section id="th"><h2>스레드 — 본문 먼저 올리고, 결과는 답글로</h2></section>`;
   $("#ig").append(copyBox("캡션 전체", caption));
@@ -101,11 +110,11 @@ async function show() {
 
   $("#share").onclick = async () => {
     try {
-      const blob = await fetch(base + "image.jpg").then(r => r.blob());
-      const file = new File([blob], `daily_test_${d}.jpg`, { type: "image/jpeg" });
+      const blob = await fetch(base + media.file).then(r => r.blob());
+      const file = new File([blob], media.name, { type: media.type });
       if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file] });
-      else window.open(base + "image.jpg", "_blank");
-    } catch (e) { if (e.name !== "AbortError") window.open(base + "image.jpg", "_blank"); }
+      else window.open(base + media.file, "_blank");
+    } catch (e) { if (e.name !== "AbortError") window.open(base + media.file, "_blank"); }
   };
 }
 
